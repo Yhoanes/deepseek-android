@@ -1,0 +1,55 @@
+# Build staging & compiled artifacts
+build/*
+!build/lib/
+!build/phases/
+!build/tools/
+dist/*
+!dist/.gitkeep
+app/gen/
+web/generated/
+
+# Track compressed Zstd archives (<100 MB); ignore raw uncompressed archives
+core/*.tar
+core/*.tar.gz
+!core/deepseek-core.tar.zst
+env/bootstrap/*.tar
+env/bootstrap/*.tar.gz
+!env/bootstrap/bootstrap.tar.zst
+
+# Python & Rust build caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+env/rust/*/target/
+tools/rust-bootstrap/target/
+target/
+
+# Logs, temporary & signature files
+*.log
+*.tmp
+*.bak
+*.swp
+*~
+*.idsig
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Sensitive credentials & keystores (NEVER commit signing keys)
+*.keystore
+*.jks
+*.p12
+*.pfx
+*.pk8
+*.pem
+!env/overlay/etc/tls/cert.pem
+signing.env
+keystore.env
+*.key
+*-token
+.env.local
+
+# Scratch / local workspaces
+scratch/

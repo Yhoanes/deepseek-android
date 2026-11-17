@@ -1,0 +1,13 @@
+#!/system/bin/sh
+# DeepSeek native Rust notification bridge, with automatic bash fallback.
+SELF_DIR="${0%/*}"
+PREFIX="${PREFIX:-$(cd "$SELF_DIR/.." 2>/dev/null && pwd || echo /data/data/com.ds.ide/files/usr)}"
+export PREFIX
+for BOX in "$PREFIX/bin/ds-box" "$PREFIX/bin/agy-box"; do
+    if [ "${AGY_DISABLE_RUST_BOX:-0}" != "1" ] && [ -x "$BOX" ]; then
+        if "$BOX" --probe >/dev/null 2>&1; then
+            exec "$BOX" notify "$@"
+        fi
+    fi
+done
+exec "$PREFIX/bin/bash" "$PREFIX/libexec/agy-notify.sh" "$@"

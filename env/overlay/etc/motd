@@ -1,0 +1,5 @@
+Welcome to DeepSeek for Android (v0.2.2 — Native ARM64)!
+  * Package manager:  pkg update && pkg install <pkg>
+  * DeepSeek CLI:     dsh --version
+  * Shizuku shell:    rish -c "<command>"
+  * Fix paths:        ds-fix-paths

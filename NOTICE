@@ -1,0 +1,11 @@
+DeepSeek for Android (com.ds.ide)
+Copyright (c) 2026 Yhoanes (https://github.com/Yhoanes/deepseek-android)
+Created and engineered by Yhoanes. Non-commercial use only; attribution mandatory.
+
+This product bundles and adapts open-source software components:
+1. DeepSeek Harness (@deepseek-ai/dsh v0.2.2-rc.3) — Copyright (c) 2026 Hangzhou DeepSeek Artificial Intelligence Co., Ltd. (MIT License).
+2. Node.js Runtime (v24.22.3 LTS) — Copyright Node.js contributors (MIT License).
+3. Zstandard (libzstd) — Copyright Meta Platforms, Inc. and affiliates (BSD License).
+4. GNU C Library (glibc 2.44 ARM64) & libstdc++6 — Free Software Foundation (LGPL v2.1+ / GPLv3 with GCC Runtime Library Exception).
+5. Termux Bionic Userspace Bootstrap & Ripgrep — Termux Team / BurntSushi (GPLv3 / MIT / Unlicense).
+6. Shizuku rish Bridge — RikkaApps (Apache License 2.0).

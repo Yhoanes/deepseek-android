@@ -1,0 +1,119 @@
+package com.ds.ide.ui.webview;
+
+import android.content.Context;
+import android.webkit.WebView;
+
+import com.ds.ide.bridge.AndroidBridge;
+import com.ds.ide.oauth.OAuthManager;
+import com.ds.ide.theme.ThemeManager;
+import com.ds.ide.util.CoreUrl;
+
+/**
+ * Builds and configures the single WebView that hosts *our* patched UI
+ * (assets/web/index.html). The HTML is injected inline but based at the core's
+ * https origin. The native object is exposed as `Android`.
+ */
+public final class WebViewHost {
+
+    public interface Listener {
+        void onPageFinished(String url);
+    }
+
+    private final Context context;
+    private final ThemeManager theme;
+    private final OAuthManager oauth;
+    private final AndroidBridge bridge;
+    private final WebView webView;
+    private Listener listener;
+
+    public WebViewHost(Context context, ThemeManager theme, OAuthManager oauth,
+                       AndroidBridge bridge, AgyWebChromeClient.FileChooserCallback fileChooserCallback) {
+        this.context = context;
+        this.theme = theme;
+        this.oauth = oauth;
+        this.bridge = bridge;
+        this.webView = WebViewFactory.create(context, bridge, theme);
+        this.webView.setWebChromeClient(new AgyWebChromeClient(
+                new PopupWindowHandler(context, oauth), fileChooserCallback, bridge));
+        this.webView.setWebViewClient(new AgyWebViewClient(
+                context, oauth, new LocalAssetServer(), bridge, new Listener() {
+            @Override
+            public void onPageFinished(String url) {
+                if (WebViewHost.this.listener != null) {
+                    WebViewHost.this.listener.onPageFinished(url);
+                }
+            }
+        }));
+        this.webView.setDownloadListener(new android.webkit.DownloadListener() {
+            @Override
+            public void onDownloadStart(String url, String userAgent, String contentDisposition,
+                                        String mimetype, long contentLength) {
+                if (com.ds.ide.ui.MainActivity.activeActivity != null) {
+                    com.ds.ide.ui.download.FileDownloader.handleDownload(
+                            com.ds.ide.ui.MainActivity.activeActivity, webView, url,
+                            userAgent, contentDisposition, mimetype, contentLength,
+                            bridge != null ? bridge.getBridgeAuthToken() : null);
+                }
+            }
+        });
+    }
+
+    public WebViewHost(Context context, ThemeManager theme, OAuthManager oauth,
+                       AndroidBridge bridge) {
+        this(context, theme, oauth, bridge, null);
+    }
+
+    public WebView getWebView() {
+        return webView;
+    }
+
+    /** Releases WebView renderer caches; safe to call repeatedly. */
+    public void freeMemory() {
+        WebViewLifecycle.freeMemory(webView);
+    }
+
+    public void setListener(Listener listener) {
+        this.listener = listener;
+    }
+
+    public static String startUrl(int port) {
+        return CoreUrl.startUrl(port);
+    }
+
+    public static String startUrl(int port, String csrfToken) {
+        return CoreUrl.startUrl(port, csrfToken);
+    }
+
+    /** Loads our asset UI with the app config injected ahead of every app script. */
+    public void loadApp() {
+        AppLoader.load(context, webView, theme, bridge);
+    }
+
+    /** Detaches JS interfaces, callbacks, parent view, and destroys the underlying WebView cleanly. */
+    public void destroy() {
+        this.listener = null;
+        try {
+            webView.stopLoading();
+        } catch (Throwable ignored) {
+        }
+        try {
+            webView.setDownloadListener(null);
+            webView.setWebChromeClient(null);
+        } catch (Throwable ignored) {
+        }
+        try {
+            webView.removeJavascriptInterface(bridge.getRawInterfaceName());
+        } catch (Throwable ignored) {
+        }
+        try {
+            if (webView.getParent() instanceof android.view.ViewGroup) {
+                ((android.view.ViewGroup) webView.getParent()).removeView(webView);
+            }
+        } catch (Throwable ignored) {
+        }
+        try {
+            webView.destroy();
+        } catch (Throwable ignored) {
+        }
+    }
+}

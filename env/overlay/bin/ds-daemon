@@ -1,0 +1,58 @@
+#!/system/bin/sh
+# DeepSeek native Rust daemon launcher (zero-Python), with automatic fallback.
+SELF_DIR="${0%/*}"
+PREFIX="${PREFIX:-$(cd "$SELF_DIR/.." 2>/dev/null && pwd || echo /data/data/com.ds.ide/files/usr)}"
+export PREFIX
+for BOX in "$PREFIX/bin/ds-box" "$PREFIX/bin/agy-box"; do
+    if [ "${AGY_DISABLE_RUST_BOX:-0}" != "1" ] && [ -x "$BOX" ]; then
+        if "$BOX" --probe >/dev/null 2>&1; then
+            exec "$BOX" daemon "$@"
+        fi
+    fi
+done
+if [ -x "$PREFIX/bin/python3" ]; then
+    exec "$PREFIX/bin/python3" "$PREFIX/libexec/agy-daemon.py" "$@"
+fi
+HOME_DIR="${HOME:-$(cd "$PREFIX/.." 2>/dev/null && pwd || echo /data/data/com.ds.ide/files)}"
+DAEMON_DIR="${DSH_HOME:-$HOME_DIR/.dsh}/daemon"
+PID_FILE="$DAEMON_DIR/daemon.pid"
+case "${1:-}" in
+    status)
+        if [ -f "$PID_FILE" ]; then
+            PID="$(cat "$PID_FILE" 2>/dev/null)"
+            if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
+                echo "Daemon PID file exists (running): $PID_FILE"
+                exit 0
+            fi
+        fi
+        echo "Daemon not currently running."
+        exit 0
+        ;;
+    stop)
+        if [ -f "$PID_FILE" ]; then
+            PID="$(cat "$PID_FILE" 2>/dev/null)"
+            [ -n "$PID" ] && kill "$PID" 2>/dev/null || true
+            rm -f "$PID_FILE"
+            echo "[ds-daemon] Stopped daemon (PID: $PID)."
+        else
+            echo "Daemon not currently running."
+        fi
+        exit 0
+        ;;
+    list)
+        if [ -s "$DAEMON_DIR/tasks.json" ]; then
+            cat "$DAEMON_DIR/tasks.json"
+        else
+            echo "No tasks scheduled."
+        fi
+        exit 0
+        ;;
+    ""|-h|--help|help)
+        echo "Usage: ds-daemon <start|stop|status|list|clear|remove|add>"
+        exit 0
+        ;;
+    *)
+        echo "[ds-daemon] Python fallback requires python3 (run: pkg install python)." >&2
+        exit 1
+        ;;
+esac

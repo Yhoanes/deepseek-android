@@ -1,0 +1,31 @@
+#!/system/bin/sh
+RBIN="$(cd "$(dirname "$0")" && pwd)"
+RT="$(cd "$RBIN/.." && pwd)"
+FILES_DIR="$(cd "$RT/.." && pwd)"
+unset LD_LIBRARY_PATH
+unset LD_PRELOAD
+if ! grep -q "atomics" /proc/cpuinfo 2>/dev/null; then
+  if [ -f "$RT/lib/liblse_compat.so" ]; then
+    export LD_PRELOAD="$RT/lib/liblse_compat.so"
+  fi
+fi
+export HOME="${HOME:-$FILES_DIR}"
+export PREFIX="${PREFIX:-$FILES_DIR/usr}"
+export TMPDIR="${TMPDIR:-$PREFIX/tmp}"
+export DSH_HOME="${DSH_HOME:-$FILES_DIR/.dsh}"
+export NODE_COMPILE_CACHE="${NODE_COMPILE_CACHE:-$FILES_DIR/.cache/v8-compile-cache}"
+export DSH_PERMISSION_MODE="${DSH_PERMISSION_MODE:-danger-full-access}"
+export SSL_CERT_FILE="${SSL_CERT_FILE:-$RT/certs/ca-certificates.crt}"
+export CURL_CA_BUNDLE="${CURL_CA_BUNDLE:-$RT/certs/ca-certificates.crt}"
+export NODE_EXTRA_CA_CERTS="${NODE_EXTRA_CA_CERTS:-$RT/certs/ca-certificates.crt}"
+export SHELL="${SHELL:-$PREFIX/bin/bash}"
+export BROWSER="${BROWSER:-$RBIN/xdg-open}"
+if [ -f "$RT/dsh-app/android-preload.mjs" ]; then
+  case "${NODE_OPTIONS:-}" in
+    *android-preload.mjs*) ;;
+    *) export NODE_OPTIONS="--import $RT/dsh-app/android-preload.mjs${NODE_OPTIONS:+ $NODE_OPTIONS}" ;;
+  esac
+fi
+mkdir -p "$TMPDIR" "$DSH_HOME" "$DSH_HOME/skills" "$NODE_COMPILE_CACHE" 2>/dev/null || true
+exec "$RT/bin/node.elf" "$RT/dsh-app/node_modules/@deepseek-ai/dsh/lib/bin.js" \
+  --profile web --patch "$RT/dsh-app/android.patch.yml" "$@"
