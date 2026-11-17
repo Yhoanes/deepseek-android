@@ -243,4 +243,19 @@ public final class AgyWebViewClient extends WebViewClient {
             listener.onPageFinished(url);
         }
     }
+
+    @Override
+    public boolean onRenderProcessGone(WebView view, android.webkit.RenderProcessGoneDetail detail) {
+        Log.w(TAG, "Main WebView renderer exited; recovering Activity cleanly instead of crashing");
+        com.ds.ide.ui.MainActivity act = com.ds.ide.ui.MainActivity.activeActivity;
+        if (act != null && !act.isFinishing() && !act.isDestroyed()) {
+            act.runOnUiThread(() -> {
+                try {
+                    act.recreate();
+                } catch (Throwable ignored) {
+                }
+            });
+        }
+        return true;
+    }
 }
