@@ -67,7 +67,7 @@ public final class ThemeManager {
 
     public void applyToActivity(Activity activity) {
         if (activity != null) {
-            ActivityPainter.apply(activity, controller.isDark());
+            ActivityPainter.apply(activity, controller.isDark(), controller.isOledPreferred());
         }
     }
 

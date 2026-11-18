@@ -177,21 +177,13 @@ public final class LocalAssetServer {
                     + "try{var cs=document.currentScript;if(cs){cs.textContent='';if(cs.parentNode)cs.parentNode.removeChild(cs);}}catch(e){}"
                     + "})();</script>\n";
 
+            String headInjection = facadeScript
+                    + (html.contains("/__ds_android_boot.js") ? "" : "    <script src=\"/__ds_android_boot.js\"></script>\n");
             int headIdx = html.indexOf("<head>");
             if (headIdx >= 0) {
-                html = html.substring(0, headIdx + 6) + facadeScript + html.substring(headIdx + 6);
+                html = html.substring(0, headIdx + 6) + headInjection + html.substring(headIdx + 6);
             } else {
-                html = facadeScript + html;
-            }
-
-            if (!html.contains("/__ds_android_boot.js")) {
-                String bootScript = "\n    <script src=\"/__ds_android_boot.js\" defer></script>\n";
-                int headClose = html.indexOf("</head>");
-                if (headClose >= 0) {
-                    html = html.substring(0, headClose) + bootScript + html.substring(headClose);
-                } else {
-                    html = html + bootScript;
-                }
+                html = headInjection + html;
             }
 
             byte[] bytes = html.getBytes(StandardCharsets.UTF_8);

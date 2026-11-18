@@ -4,8 +4,14 @@
 #
 
 log "[12/12] apksigner verify + native Rust & Zstd payload integrity check"
-CERT_INFO="$(apksigner verify --verbose --print-certs "$OUT_APK")"
+CERT_INFO="$(apksigner verify --min-sdk-version 21 --verbose --print-certs "$OUT_APK")"
 printf '%s\n' "$CERT_INFO"
+printf '%s\n' "$CERT_INFO" | grep -q "Verified using v1 scheme (JAR signing): true" \
+    || die "APK missing v1 signature scheme (required for Huawei/HarmonyOS compatibility)"
+printf '%s\n' "$CERT_INFO" | grep -q "Verified using v2 scheme (APK Signature Scheme v2): true" \
+    || die "APK missing v2 signature scheme"
+printf '%s\n' "$CERT_INFO" | grep -q "Verified using v3 scheme (APK Signature Scheme v3): true" \
+    || die "APK missing v3 signature scheme"
 if [ "${DEV_MODE:-0}" -eq 0 ] && [ -n "${DS_RELEASE_KEYSTORE:-}" ]; then
     printf '%s\n' "$CERT_INFO" | grep -q "O=DeepSeek Android" \
         || die "RELEASE APK is not signed with dedicated DeepSeek Android certificate"

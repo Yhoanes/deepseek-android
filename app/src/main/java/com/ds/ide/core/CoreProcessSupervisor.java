@@ -212,8 +212,9 @@ public final class CoreProcessSupervisor {
                     CoreLogWriter.writeLine(log, "dsh web: [launch-token captured]");
                     continue;
                 }
-                Log.d(TAG, line);
-                CoreLogWriter.writeLine(log, line);
+                String safeLine = CoreLogRedactor.redact(line);
+                Log.d(TAG, safeLine);
+                CoreLogWriter.writeLine(log, safeLine);
                 if (line.contains("[deepseek-account] android-oauth-complete")) {
                     Log.i(TAG, "OAuth completed in browser; bringing DeepSeek task to front");
                     com.ds.ide.oauth.OAuthCallbackActivity.bringAppToFront(appContext);

@@ -10,7 +10,7 @@ mapfile -d '' GEN_SOURCES < <(find "$GEN_DIR" -name '*.java' -print0 | sort -z)
 [ "${#GEN_SOURCES[@]}" -gt 0 ] || die "no generated sources under $GEN_DIR"
 
 log "  compiling ${#JAVA_SOURCES[@]} app sources + ${#GEN_SOURCES[@]} generated sources"
-javac -encoding UTF-8 -J-Dfile.encoding=UTF-8 -J-Dsun.jnu.encoding=UTF-8 \
+javac --release 17 -encoding UTF-8 -J-Dfile.encoding=UTF-8 -J-Dsun.jnu.encoding=UTF-8 \
     -d "$OBJ_DIR" \
     -cp "$ANDROID_JAR" \
     "${GEN_SOURCES[@]}" \

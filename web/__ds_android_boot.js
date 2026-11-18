@@ -1,3 +1,267 @@
+/* DeepSeek for Android — WebView Compatibility Polyfills & Native Bridge Boot */
+(function () {
+  "use strict";
+
+  // 0. Idempotent WebView Compatibility Polyfills (HarmonyOS 4.x / Chromium < 119)
+  // No-op on modern WebViews where native implementations already exist.
+  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.any !== "function") {
+    AbortSignal.any = function (signals) {
+      var controller = new AbortController();
+      var list = Array.prototype.slice.call(signals || []);
+      for (var i = 0; i < list.length; i++) {
+        var sig = list[i];
+        if (sig && sig.aborted) {
+          controller.abort(sig.reason);
+          return controller.signal;
+        }
+      }
+      for (var j = 0; j < list.length; j++) {
+        (function (s) {
+          if (!s || typeof s.addEventListener !== "function") return;
+          s.addEventListener("abort", function () {
+            if (!controller.signal.aborted) {
+              controller.abort(s.reason);
+            }
+          }, { once: true });
+        })(list[j]);
+      }
+      return controller.signal;
+    };
+  }
+
+  if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout !== "function") {
+    AbortSignal.timeout = function (ms) {
+      var controller = new AbortController();
+      setTimeout(function () {
+        try {
+          controller.abort(new DOMException("The operation timed out.", "TimeoutError"));
+        } catch (_) {
+          controller.abort();
+        }
+      }, ms);
+      return controller.signal;
+    };
+  }
+
+  if (typeof Promise !== "undefined" && typeof Promise.withResolvers !== "function") {
+    Promise.withResolvers = function () {
+      var resolve, reject;
+      var promise = new Promise(function (res, rej) {
+        resolve = res;
+        reject = rej;
+      });
+      return { promise: promise, resolve: resolve, reject: reject };
+    };
+  }
+
+  if (typeof window.structuredClone !== "function") {
+    var cloneValue = function (val, seen) {
+      if (val === null || typeof val !== "object") return val;
+      if (val instanceof Date) return new Date(val.getTime());
+      if (val instanceof RegExp) return new RegExp(val.source, val.flags);
+      if (typeof ArrayBuffer !== "undefined" && val instanceof ArrayBuffer) return val.slice(0);
+      if (typeof ArrayBuffer !== "undefined" && ArrayBuffer.isView && ArrayBuffer.isView(val)) {
+        try { return new val.constructor(val); } catch (_) { return val; }
+      }
+      if (seen.has(val)) return seen.get(val);
+      if (Array.isArray(val)) {
+        var arr = new Array(val.length);
+        seen.set(val, arr);
+        for (var i = 0; i < val.length; i++) arr[i] = cloneValue(val[i], seen);
+        return arr;
+      }
+      if (typeof Map !== "undefined" && val instanceof Map) {
+        var map = new Map();
+        seen.set(val, map);
+        val.forEach(function (v, k) { map.set(cloneValue(k, seen), cloneValue(v, seen)); });
+        return map;
+      }
+      if (typeof Set !== "undefined" && val instanceof Set) {
+        var set = new Set();
+        seen.set(val, set);
+        val.forEach(function (v) { set.add(cloneValue(v, seen)); });
+        return set;
+      }
+      var out = {};
+      seen.set(val, out);
+      var keys = Object.keys(val);
+      for (var k = 0; k < keys.length; k++) {
+        var key = keys[k];
+        out[key] = cloneValue(val[key], seen);
+      }
+      return out;
+    };
+    window.structuredClone = function (value) {
+      return cloneValue(value, new Map());
+    };
+  }
+
+  if (typeof Object.hasOwn !== "function") {
+    Object.hasOwn = function (obj, prop) {
+      return Object.prototype.hasOwnProperty.call(obj, prop);
+    };
+  }
+
+  if (!Array.prototype.at) {
+    Object.defineProperty(Array.prototype, "at", {
+      value: function (n) {
+        var len = this.length >>> 0;
+        var rel = Math.trunc(n) || 0;
+        var k = rel >= 0 ? rel : len + rel;
+        return (k < 0 || k >= len) ? undefined : this[k];
+      },
+      writable: true,
+      configurable: true
+    });
+  }
+
+  if (!String.prototype.at) {
+    Object.defineProperty(String.prototype, "at", {
+      value: function (n) {
+        var str = String(this);
+        var len = str.length;
+        var rel = Math.trunc(n) || 0;
+        var k = rel >= 0 ? rel : len + rel;
+        return (k < 0 || k >= len) ? undefined : str.charAt(k);
+      },
+      writable: true,
+      configurable: true
+    });
+  }
+
+  if (!Array.prototype.findLast) {
+    Object.defineProperty(Array.prototype, "findLast", {
+      value: function (predicate, thisArg) {
+        for (var i = (this.length >>> 0) - 1; i >= 0; i--) {
+          if (predicate.call(thisArg, this[i], i, this)) return this[i];
+        }
+        return undefined;
+      },
+      writable: true,
+      configurable: true
+    });
+  }
+
+  if (!Array.prototype.findLastIndex) {
+    Object.defineProperty(Array.prototype, "findLastIndex", {
+      value: function (predicate, thisArg) {
+        for (var i = (this.length >>> 0) - 1; i >= 0; i--) {
+          if (predicate.call(thisArg, this[i], i, this)) return i;
+        }
+        return -1;
+      },
+      writable: true,
+      configurable: true
+    });
+  }
+
+  if (!Array.prototype.toSorted) {
+    Object.defineProperty(Array.prototype, "toSorted", {
+      value: function (compareFn) {
+        var copy = Array.prototype.slice.call(this);
+        return compareFn !== undefined ? copy.sort(compareFn) : copy.sort();
+      },
+      writable: true,
+      configurable: true
+    });
+  }
+
+  if (!Array.prototype.toReversed) {
+    Object.defineProperty(Array.prototype, "toReversed", {
+      value: function () {
+        return Array.prototype.slice.call(this).reverse();
+      },
+      writable: true,
+      configurable: true
+    });
+  }
+
+  if (!Array.prototype.toSpliced) {
+    Object.defineProperty(Array.prototype, "toSpliced", {
+      value: function () {
+        var copy = Array.prototype.slice.call(this);
+        Array.prototype.splice.apply(copy, arguments);
+        return copy;
+      },
+      writable: true,
+      configurable: true
+    });
+  }
+
+  if (!Array.prototype.with) {
+    Object.defineProperty(Array.prototype, "with", {
+      value: function (index, value) {
+        var copy = Array.prototype.slice.call(this);
+        var len = copy.length;
+        var rel = Math.trunc(index) || 0;
+        var k = rel >= 0 ? rel : len + rel;
+        if (k < 0 || k >= len) throw new RangeError("Invalid index");
+        copy[k] = value;
+        return copy;
+      },
+      writable: true,
+      configurable: true
+    });
+  }
+
+  if (!String.prototype.replaceAll) {
+    Object.defineProperty(String.prototype, "replaceAll", {
+      value: function (search, replacement) {
+        var target = String(this);
+        if (search instanceof RegExp) {
+          if (search.flags.indexOf("g") === -1) {
+            throw new TypeError("String.prototype.replaceAll called with a non-global RegExp");
+          }
+          return target.replace(search, replacement);
+        }
+        return target.split(String(search)).join(String(replacement));
+      },
+      writable: true,
+      configurable: true
+    });
+  }
+
+  if (typeof window.crypto !== "undefined" && typeof window.crypto.randomUUID !== "function"
+      && typeof window.crypto.getRandomValues === "function") {
+    window.crypto.randomUUID = function () {
+      var buf = new Uint8Array(16);
+      window.crypto.getRandomValues(buf);
+      buf[6] = (buf[6] & 0x0f) | 0x40;
+      buf[8] = (buf[8] & 0x3f) | 0x80;
+      var hex = [];
+      for (var i = 0; i < 16; i++) hex.push((buf[i] + 0x100).toString(16).slice(1));
+      return hex.slice(0, 4).join("") + "-" + hex.slice(4, 6).join("") + "-"
+        + hex.slice(6, 8).join("") + "-" + hex.slice(8, 10).join("") + "-" + hex.slice(10, 16).join("");
+    };
+  }
+
+  if (typeof window.ResizeObserver === "undefined") {
+    window.ResizeObserver = function (cb) { this._cb = cb; };
+    window.ResizeObserver.prototype.observe = function (el) {
+      if (!el || typeof this._cb !== "function") return;
+      var cb = this._cb;
+      requestAnimationFrame(function () {
+        try { cb([{ target: el, contentRect: el.getBoundingClientRect() }]); } catch (_) {}
+      });
+    };
+    window.ResizeObserver.prototype.unobserve = function () {};
+    window.ResizeObserver.prototype.disconnect = function () {};
+  }
+
+  if (typeof window.IntersectionObserver === "undefined") {
+    window.IntersectionObserver = function (cb) { this._cb = cb; };
+    window.IntersectionObserver.prototype.observe = function (el) {
+      if (!el || typeof this._cb !== "function") return;
+      var cb = this._cb;
+      requestAnimationFrame(function () {
+        try { cb([{ target: el, isIntersecting: true, intersectionRatio: 1 }]); } catch (_) {}
+      });
+    };
+    window.IntersectionObserver.prototype.unobserve = function () {};
+    window.IntersectionObserver.prototype.disconnect = function () {};
+  }
+})();
+
 (function () {
   "use strict";
 
@@ -30,6 +294,55 @@
       }).catch(function () {});
     }
   } catch (_) {}
+
+  var OLED_STORAGE_KEY = "ds_android_oled_mode";
+  function isOledEnabled() {
+    try {
+      return localStorage.getItem(OLED_STORAGE_KEY) === "1";
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function applyOledStyle() {
+    var existing = document.getElementById("ds-android-oled-css");
+    if (!isOledEnabled()) {
+      if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
+      return;
+    }
+    if (existing) return;
+    var st = document.createElement("style");
+    st.id = "ds-android-oled-css";
+    st.textContent = [
+      "[data-ds-dark-theme] {",
+      "  --dsw-static-neutral-bluish-1000: #000000 !important;",
+      "  --dsw-static-neutral-bluish-950: #000000 !important;",
+      "  --dsw-static-neutral-bluish-900: #050506 !important;",
+      "  --dsw-static-neutral-bluish-875: #0a0a0b !important;",
+      "  --dsw-static-neutral-bluish-850: #101012 !important;",
+      "  --dsw-static-neutral-bluish-800: #17171a !important;",
+      "  --dsw-alias-bg-base: #000000 !important;",
+      "}",
+      "html[data-ds-dark-theme] body, body[data-ds-dark-theme] {",
+      "  background-color: #000000 !important;",
+      "}"
+    ].join("\n");
+    (document.head || document.documentElement).appendChild(st);
+  }
+  applyOledStyle();
+
+  function setOledEnabled(enabled) {
+    try {
+      if (enabled) {
+        localStorage.setItem(OLED_STORAGE_KEY, "1");
+      } else {
+        localStorage.removeItem(OLED_STORAGE_KEY);
+      }
+    } catch (_) {}
+    applyOledStyle();
+    lastVisual = "";
+    syncTheme();
+  }
 
   var pendingCallbacks = Object.create(null);
   var pendingTimers = Object.create(null);
@@ -72,14 +385,27 @@
     settleCb(cbId, typeof pickedPath === "string" ? pickedPath : "");
   };
 
-  var latestUpdateState = { type: "idle" };
-  var lastRenderedUpdateType = "idle";
+  var latestUpdateState = null;
+  var lastRenderedUpdateSig = "";
+  function ensureUpdateStateHydrated() {
+    if (latestUpdateState) return latestUpdateState;
+    var host = getHost();
+    try {
+      if (host && typeof host.getUpdateStateJson === "function") {
+        latestUpdateState = JSON.parse(host.getUpdateStateJson() || '{"type":"idle"}');
+      }
+    } catch (_) {}
+    if (!latestUpdateState) latestUpdateState = { type: "idle" };
+    return latestUpdateState;
+  }
+
   window.__dsOnUpdaterStateChanged = function (st) {
     var next = st || { type: "idle" };
-    var prevType = lastRenderedUpdateType;
+    var prevType = latestUpdateState ? latestUpdateState.type : "idle";
     latestUpdateState = next;
-    if (next.type !== prevType || next.type === "downloading") {
-      lastRenderedUpdateType = next.type;
+    var sig = [next.type || "", next.version || "", next.progress || "", next.result || "", next.error || ""].join("|");
+    if (sig !== lastRenderedUpdateSig) {
+      lastRenderedUpdateSig = sig;
       if (next.type === "ready" && prevType !== "ready") {
         showToast(isSpanish()
           ? "Actualización v" + (next.version || "") + " lista en Complementos"
@@ -126,7 +452,7 @@
       "  .ZuhsRW_content { padding: 12px 12px 12px 16px !important; }",
       "  .ZuhsRW_footerBar { padding: 12px 16px !important; flex-wrap: wrap !important; gap: 8px !important; }",
       "}",
-      /* Authentic PC Desktop OnboardingSurface backdrop (no custom icon, solid base surface when unauthenticated) */
+      /* Authentic PC Desktop OnboardingSurface backdrop (solid base surface when unauthenticated) */
       "body:has([data-shortcut-modal] ._76YFJG_dialog:not(:has(._76YFJG_close)), .jLrgrW_dialog) > div[role='presentation'] > div[aria-hidden='true'],",
       "body > div[role='presentation']:has(> ._76YFJG_dialog:not(:has(._76YFJG_close)), > .jLrgrW_dialog) > div[aria-hidden='true'] {",
       "  background: var(--dsw-alias-bg-base, #15161a) !important;",
@@ -143,7 +469,20 @@
       "  section[data-desktop-onboarding='credit'] > div { grid-template-columns: 1fr !important; gap: 24px !important; position: relative !important; top: auto !important; left: auto !important; transform: none !important; padding-top: 24px !important; }",
       "}",
       "#ds-agy-plugins-hub { display: flex; flex-direction: column; gap: 10px; width: 100%; }",
-      ".ds-pm-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 4px; }",
+      ".ds-sys-card {",
+      "  display: flex; flex-direction: column; gap: 8px; padding: 11px 12px; border-radius: 12px;",
+      "  background: var(--dsw-alias-bg-layer-2, rgba(255,255,255,0.035));",
+      "  border: 0.5px solid var(--dsw-alias-border-l3, rgba(255,255,255,0.08));",
+      "}",
+      ".ds-sys-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }",
+      ".ds-sys-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }",
+      ".ds-sys-label { font-size: 13px; font-weight: 500; color: var(--dsw-alias-label-primary, #f5f6fa); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }",
+      ".ds-sys-sub { font-size: 12px; color: var(--dsw-alias-label-secondary, rgba(160,160,175,0.85)); }",
+      ".ds-sys-sub.err { color: #ef4444; }",
+      ".ds-sys-divider { height: 0.5px; background: var(--dsw-alias-border-l3, rgba(255,255,255,0.07)); width: 100%; }",
+      ".ds-ota-bar { width: 100%; height: 5px; border-radius: 999px; background: rgba(140,140,160,0.22); overflow: hidden; }",
+      ".ds-ota-fill { height: 100%; border-radius: 999px; background: #4D6BFE; transition: width 0.2s ease; }",
+      ".ds-pm-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 4px 0 4px; }",
       ".ds-pm-title { margin: 0; font-size: 13.5px; font-weight: 500; color: var(--dsw-alias-label-primary, #f5f6fa); }",
       ".ds-pm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }",
       ".ds-pm-row { display: flex; align-items: center; gap: 14px; padding: 8px; border-radius: 12px; transition: background 0.15s ease; }",
@@ -242,15 +581,17 @@
     return false;
   }
 
-  // 3. Bi-directional theme sync
+  // 3. Bi-directional theme sync (including pure-black OLED mode in dark theme)
   var lastVisual = "";
   var lastSource = "";
   function syncTheme() {
     var host = getHost();
     if (!host || !document.body) return;
     try {
-      var isDark = document.body.hasAttribute("data-ds-dark-theme");
-      var visual = isDark ? "dark" : "light";
+      applyOledStyle();
+      var isDark = document.body.hasAttribute("data-ds-dark-theme")
+        || (document.documentElement && document.documentElement.hasAttribute("data-ds-dark-theme"));
+      var visual = isDark ? (isOledEnabled() ? "oled" : "dark") : "light";
       if (visual !== lastVisual && typeof host.onVisualThemeChanged === "function") {
         lastVisual = visual;
         host.onVisualThemeChanged(visual);
@@ -333,9 +674,10 @@
     } catch (_) {}
   }
 
-  // 5. Native Android ARM64 Plugins inside the dedicated "Complementos" page ([data-plugin-panel])
+  // 5. Native Android System Card (OTA + OLED) & ARM64 Plugins inside [data-plugin-panel]
   var busyPluginMap = Object.create(null);
   var cachedCatalog = null;
+  var cachedAppVersion = "";
 
   var PLUGIN_SVG = {
     "craft-anything": '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6e88ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>',
@@ -349,6 +691,17 @@
     "android-cli-plugin": '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="12" height="16" rx="2"/><line x1="10" y1="17" x2="14" y2="17"/></svg>',
     "science": '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v6l-5 8a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-8V3"/></svg>'
   };
+
+  function getInstalledAppVersion() {
+    if (cachedAppVersion) return cachedAppVersion;
+    var host = getHost();
+    try {
+      if (host && typeof host.getAppVersion === "function") {
+        cachedAppVersion = host.getAppVersion() || "";
+      }
+    } catch (_) {}
+    return cachedAppVersion || "0.2.2-r3";
+  }
 
   function loadCatalog() {
     if (cachedCatalog) return cachedCatalog;
@@ -375,6 +728,135 @@
     return {};
   }
 
+  function buildAndroidSystemCard(es, upd) {
+    var card = document.createElement("div");
+    card.className = "ds-sys-card";
+
+    var otaRow = document.createElement("div");
+    otaRow.className = "ds-sys-row";
+
+    var otaMeta = document.createElement("div");
+    otaMeta.className = "ds-sys-meta";
+
+    var otaTitle = document.createElement("div");
+    otaTitle.className = "ds-sys-label";
+    var verBadge = document.createElement("span");
+    verBadge.className = "ds-pm-tag";
+    verBadge.textContent = "v" + (upd.installedVersion || getInstalledAppVersion());
+    otaTitle.appendChild(document.createTextNode("DeepSeek Android "));
+    otaTitle.appendChild(verBadge);
+    otaMeta.appendChild(otaTitle);
+
+    var otaSub = document.createElement("div");
+    otaSub.className = "ds-sys-sub";
+    var stType = (upd && upd.type) || "idle";
+    if (stType === "ready") {
+      otaSub.textContent = es
+        ? "Nueva versión v" + (upd.version || "") + " descargada y lista para instalar"
+        : "New release v" + (upd.version || "") + " downloaded and ready to install";
+    } else if (stType === "downloading" || stType === "available for download") {
+      var dlPct = typeof upd.progress === "number" && upd.progress >= 0 ? upd.progress + "%" : "…";
+      otaSub.textContent = es
+        ? "Descargando actualización v" + (upd.version || "") + " (" + dlPct + ")"
+        : "Downloading update v" + (upd.version || "") + " (" + dlPct + ")";
+    } else if (stType === "checking for updates") {
+      otaSub.textContent = es ? "Comprobando lanzamientos en GitHub…" : "Checking GitHub Releases…";
+    } else if (upd && upd.error) {
+      otaSub.className = "ds-sys-sub err";
+      otaSub.textContent = (es ? "Error OTA: " : "OTA error: ") + upd.error;
+    } else if (upd && upd.result === "up-to-date") {
+      otaSub.textContent = es ? "Estás en la versión más reciente" : "You are on the latest release";
+    } else {
+      otaSub.textContent = es
+        ? "Actualizaciones OTA automáticas desde GitHub Releases"
+        : "Automatic OTA updates from GitHub Releases";
+    }
+    otaMeta.appendChild(otaSub);
+    otaRow.appendChild(otaMeta);
+
+    if (stType === "ready") {
+      var installBtn = document.createElement("button");
+      installBtn.type = "button";
+      installBtn.className = "ds-agy-btn primary";
+      installBtn.textContent = es
+        ? "Instalar" + (upd.version ? " v" + upd.version : "")
+        : "Install" + (upd.version ? " v" + upd.version : "");
+      installBtn.addEventListener("click", function () {
+        try { getHost().applyAppUpdateAuth(BRIDGE_TOKEN); } catch (_) {}
+      });
+      otaRow.appendChild(installBtn);
+    } else if (stType === "downloading" || stType === "available for download") {
+      var dlBtn = document.createElement("button");
+      dlBtn.type = "button";
+      dlBtn.className = "ds-agy-btn";
+      dlBtn.disabled = true;
+      dlBtn.textContent = typeof upd.progress === "number" && upd.progress >= 0
+        ? upd.progress + "%"
+        : (es ? "Descargando…" : "Downloading…");
+      otaRow.appendChild(dlBtn);
+    } else {
+      var chkBtn = document.createElement("button");
+      chkBtn.type = "button";
+      chkBtn.className = "ds-agy-btn";
+      chkBtn.disabled = stType === "checking for updates";
+      chkBtn.textContent = es ? "Buscar actualización" : "Check updates";
+      chkBtn.addEventListener("click", function () {
+        try { getHost().checkForAppUpdates(true); } catch (_) {}
+      });
+      otaRow.appendChild(chkBtn);
+    }
+
+    card.appendChild(otaRow);
+
+    if (stType === "downloading") {
+      var bar = document.createElement("div");
+      bar.className = "ds-ota-bar";
+      var fill = document.createElement("div");
+      fill.className = "ds-ota-fill";
+      var pctNum = typeof upd.progress === "number" && upd.progress >= 0 ? Math.min(100, Math.max(2, upd.progress)) : 8;
+      fill.style.width = pctNum + "%";
+      bar.appendChild(fill);
+      card.appendChild(bar);
+    }
+
+    var div = document.createElement("div");
+    div.className = "ds-sys-divider";
+    card.appendChild(div);
+
+    var oledRow = document.createElement("div");
+    oledRow.className = "ds-sys-row";
+    var oledMeta = document.createElement("div");
+    oledMeta.className = "ds-sys-meta";
+    var oledTitle = document.createElement("div");
+    oledTitle.className = "ds-sys-label";
+    oledTitle.textContent = es ? "Modo Negro Puro (OLED)" : "Pure Black Mode (OLED)";
+    var oledSub = document.createElement("div");
+    oledSub.className = "ds-sys-sub";
+    oledSub.textContent = es
+      ? "Fondo #000000 en tema oscuro para ahorrar batería en pantallas AMOLED"
+      : "True #000000 dark surface for AMOLED power savings";
+    oledMeta.appendChild(oledTitle);
+    oledMeta.appendChild(oledSub);
+    oledRow.appendChild(oledMeta);
+
+    var oledActive = isOledEnabled();
+    var oledSw = document.createElement("button");
+    oledSw.type = "button";
+    oledSw.setAttribute("role", "switch");
+    oledSw.setAttribute("aria-checked", oledActive ? "true" : "false");
+    oledSw.setAttribute("data-checked", oledActive ? "1" : "0");
+    oledSw.className = "ds-pm-switch";
+    oledSw.addEventListener("click", function () {
+      var nextOled = oledSw.getAttribute("data-checked") !== "1";
+      setOledEnabled(nextOled);
+      renderPluginsHubIfMounted();
+    });
+    oledRow.appendChild(oledSw);
+    card.appendChild(oledRow);
+
+    return card;
+  }
+
   function renderPluginsHubIfMounted() {
     var host = getHost();
     if (!host) return;
@@ -396,10 +878,12 @@
     }
 
     var es = isSpanish();
+    var upd = ensureUpdateStateHydrated();
     var catalog = loadCatalog();
     var installed = loadInstalledMap();
 
     container.innerHTML = "";
+    container.appendChild(buildAndroidSystemCard(es, upd));
 
     var head = document.createElement("div");
     head.className = "ds-pm-head";
@@ -408,39 +892,6 @@
     heading.className = "ds-pm-title";
     heading.textContent = es ? "Complementos nativos Android" : "Android Native Plugins";
     head.appendChild(heading);
-
-    if (latestUpdateState && latestUpdateState.type === "ready") {
-      var otaBtn = document.createElement("button");
-      otaBtn.type = "button";
-      otaBtn.className = "ds-agy-btn primary";
-      otaBtn.textContent = es
-        ? "Actualizar" + (latestUpdateState.version ? " v" + latestUpdateState.version : " app")
-        : "Update" + (latestUpdateState.version ? " v" + latestUpdateState.version : " app");
-      otaBtn.addEventListener("click", function () {
-        try { getHost().applyAppUpdateAuth(BRIDGE_TOKEN); } catch (_) {}
-      });
-      head.appendChild(otaBtn);
-    } else if (latestUpdateState && latestUpdateState.type === "downloading") {
-      var dlBtn = document.createElement("button");
-      dlBtn.type = "button";
-      dlBtn.className = "ds-agy-btn";
-      dlBtn.disabled = true;
-      var pct = typeof latestUpdateState.progress === "number" && latestUpdateState.progress >= 0
-        ? " " + latestUpdateState.progress + "%"
-        : "…";
-      dlBtn.textContent = (es ? "Descargando" : "Downloading") + pct;
-      head.appendChild(dlBtn);
-    } else {
-      var chkBtn = document.createElement("button");
-      chkBtn.type = "button";
-      chkBtn.className = "ds-agy-btn";
-      chkBtn.disabled = !!(latestUpdateState && latestUpdateState.type === "checking for updates");
-      chkBtn.textContent = es ? "Buscar actualización" : "Check updates";
-      chkBtn.addEventListener("click", function () {
-        try { getHost().checkForAppUpdates(true); } catch (_) {}
-      });
-      head.appendChild(chkBtn);
-    }
 
     container.appendChild(head);
 
@@ -596,6 +1047,7 @@
 
   function boot() {
     injectMobileCss();
+    applyOledStyle();
     updateVisualViewport();
     if (!checkRootMounted()) {
       try {

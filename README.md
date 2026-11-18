@@ -9,7 +9,7 @@
   <p><font color="#7d8590">Standalone <b>DeepSeek Harness Desktop (<code>@deepseek-ai/dsh v0.2.2-rc.3</code>)</b> autonomous coding IDE &amp; native <b>ARM64 Android</b> APK — created and engineered by <a href="https://github.com/Yhoanes"><b>Yhoanes</b></a> (zero PRoot, zero cloud relay, zero Gradle).</font></p>
 
   <p>
-    <code>v0.2.2-r2</code> &nbsp;&bull;&nbsp;
+    <code>v0.2.2-r3</code> &nbsp;&bull;&nbsp;
     <code>Android 9.0+ (API 28+)</code> &nbsp;&bull;&nbsp;
     <code>Direct Kernel execve() ARM64</code> &nbsp;&bull;&nbsp;
     <code>Native Rust Zstd Bootstrap (~2.5s)</code> &nbsp;&bull;&nbsp;
@@ -30,7 +30,7 @@
 
 ## Architectural Overview
 
-**DeepSeek for Android (`v0.2.2-r2`)** brings the official **DeepSeek Harness Desktop (`@deepseek-ai/dsh`)** autonomous software engineering workspace directly to Android phones and tablets as a self-contained `91 MB` native APK (`com.ds.ide`).
+**DeepSeek for Android (`v0.2.2-r3`)** brings the official **DeepSeek Harness Desktop (`@deepseek-ai/dsh`)** autonomous software engineering workspace directly to Android phones and tablets as a self-contained `91 MB` native APK (`com.ds.ide`).
 
 Instead of slow `proot-distro` containers, emulated Linux VMs, or remote SSH wrappers, **DeepSeek for Android** executes directly on mobile silicon via Linux kernel `execve()`: combining a zero-dependency **Native Rust + Zstandard JNI bootstrap engine (`libds_bootstrap.so`)**, an isolated `Node.js v24.22.3 LTS` ARM64 runtime (`PT_INTERP` + `$ORIGIN` RPATH + persistent V8 `NODE_COMPILE_CACHE`), and a full **10-byte parity Android Bionic Linux userspace** (`/data/user/0/com.ds.ide/files/usr`) powered by **`ds-box v0.3.1`**.
 
@@ -120,14 +120,14 @@ Complete parity with DeepSeek Desktop's configuration architecture — **Account
 ## Installation & Building From Source
 
 ### Option A — Install Official Signed Release APK (OTA-Enabled)
-1. Download `DeepSeek-v0.2.2-r2.apk` from [**GitHub Releases**](https://github.com/Yhoanes/deepseek-android/releases/latest).
+1. Download `DeepSeek-v0.2.2-r3.apk` from [**GitHub Releases**](https://github.com/Yhoanes/deepseek-android/releases/latest).
 2. Install on your Android phone or tablet (future releases update seamlessly in-place via the built-in OTA updater):
    ```bash
    # Via ADB from PC:
-   adb install -r DeepSeek-v0.2.2-r2.apk
+   adb install -r DeepSeek-v0.2.2-r3.apk
 
    # Or on-device via AGY ADB Bridge / Shizuku:
-   rish -c "pm install -r /sdcard/Download/DeepSeek-v0.2.2-r2.apk"
+   rish -c "pm install -r /sdcard/Download/DeepSeek-v0.2.2-r3.apk"
    ```
 
 ### Option B — Gradle-Free Deterministic Build Pipeline
@@ -137,10 +137,10 @@ Complete parity with DeepSeek Desktop's configuration architecture — **Account
 git clone https://github.com/Yhoanes/deepseek-android.git
 cd deepseek-android
 
-# Release APK -> dist/DeepSeek-v0.2.2-r2.apk (package: com.ds.ide, port: 45187)
+# Release APK -> dist/DeepSeek-v0.2.2-r3.apk (package: com.ds.ide, port: 45187)
 bash build.sh
 
-# Side-by-Side Dev APK -> dist/DeepSeek-Dev-v0.2.2-r2.apk (package: com.ds.dev, port: 45188)
+# Side-by-Side Dev APK -> dist/DeepSeek-Dev-v0.2.2-r3.apk (package: com.ds.dev, port: 45188)
 bash build.sh --dev
 ```
 

@@ -8,6 +8,7 @@ public final class ThemeColors {
     public static final int MODE_LIGHT = 2;
 
     public static final int COLOR_DARK = 0xFF151517;
+    public static final int COLOR_OLED = 0xFF000000;
     public static final int COLOR_LIGHT = 0xFFFFFFFF;
 
     public static final String THEME_DARK = "dark";

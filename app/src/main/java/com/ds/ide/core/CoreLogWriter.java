@@ -33,7 +33,7 @@ public final class CoreLogWriter {
             return;
         }
         try {
-            log.write(line);
+            log.write(CoreLogRedactor.redact(line));
             log.write('\n');
             log.flush();
         } catch (Exception ignored) {

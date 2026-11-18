@@ -60,8 +60,12 @@ if [ ! -f "$SIGN_KS" ]; then
     fi
 fi
 
+# Emit v1 + v2 + v3 signature blocks (--min-sdk-version 21 forces apksigner to include
+# both v1 JAR and v2 APK Signature Scheme blocks alongside v3 even though AndroidManifest
+# minSdkVersion=28, ensuring Huawei/EMUI/HarmonyOS package installers never reject the APK).
 apksigner sign \
-    --v1-signing-enabled false \
+    --min-sdk-version 21 \
+    --v1-signing-enabled true \
     --v2-signing-enabled true \
     --v3-signing-enabled true \
     --ks "$SIGN_KS" \

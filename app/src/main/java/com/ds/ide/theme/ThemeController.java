@@ -11,6 +11,7 @@ public final class ThemeController {
     private final Context appContext;
     private Context currentContext;
     private int mode;
+    private volatile boolean oledPreferred = false;
 
     public ThemeController(Context context) {
         this.appContext = context.getApplicationContext();
@@ -57,10 +58,11 @@ public final class ThemeController {
                 ? (Activity) currentContext : null;
         if (activity != null) {
             final boolean dark = isDark();
+            final boolean oled = oledPreferred;
             MainThreadPost.post(new Runnable() {
                 @Override
                 public void run() {
-                    ActivityPainter.apply(activity, dark);
+                    ActivityPainter.apply(activity, dark, oled);
                 }
             });
         }
@@ -79,19 +81,27 @@ public final class ThemeController {
         return changed;
     }
 
-    /** Called when the Web UI paints a visual theme, without altering user mode preference. */
+    /** Called when the Web UI paints a visual theme ("dark", "oled", or "light"). */
     public void onVisualThemeChanged(final String visual) {
+        final boolean oled = "oled".equalsIgnoreCase(visual);
+        final boolean dark = oled || "dark".equalsIgnoreCase(visual);
+        if (dark) {
+            this.oledPreferred = oled;
+        }
         final Activity activity = currentContext instanceof Activity
                 ? (Activity) currentContext : null;
         if (activity != null) {
-            final boolean dark = "dark".equalsIgnoreCase(visual);
             MainThreadPost.post(new Runnable() {
                 @Override
                 public void run() {
-                    ActivityPainter.apply(activity, dark);
+                    ActivityPainter.apply(activity, dark, oled);
                 }
             });
         }
+    }
+
+    public boolean isOledPreferred() {
+        return oledPreferred;
     }
 
     /** Effective theme as a "light"/"dark" string (system mode is resolved). */
