@@ -194,7 +194,27 @@ public final class EngineBridge {
                 || "release-assets.githubusercontent.com".equals(lowerHost);
     }
 
-    private static void downloadPluginZipVerified(String initialUrl, File destZip) throws Exception {
+    private String lookupExpectedPluginSha256(String safeName) {
+        try {
+            JSONObject cat = new JSONObject(getPluginsCatalogJson());
+            JSONArray arr = cat.optJSONArray("plugins");
+            if (arr != null) {
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject item = arr.optJSONObject(i);
+                    if (item != null && safeName.equals(item.optString("name", ""))) {
+                        String sha = item.optString("sha256", "").trim().toLowerCase(java.util.Locale.ROOT);
+                        if (sha.length() == 64) {
+                            return sha;
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return "";
+    }
+
+    private static void downloadPluginZipVerified(String initialUrl, File destZip, String expectedSha256) throws Exception {
         String current = initialUrl;
         for (int hop = 0; hop < 6; hop++) {
             URL u = new URL(current);
@@ -227,6 +247,7 @@ public final class EngineBridge {
                 if (declaredLen > MAX_ZIP_DOWNLOAD_BYTES) {
                     throw new IllegalStateException("Plugin archive exceeds 256 MiB safety limit");
                 }
+                java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
                 long total = 0L;
                 try (InputStream in = conn.getInputStream();
                      FileOutputStream out = new FileOutputStream(destZip)) {
@@ -237,7 +258,20 @@ public final class EngineBridge {
                         if (total > MAX_ZIP_DOWNLOAD_BYTES) {
                             throw new IllegalStateException("Plugin archive exceeded 256 MiB limit during download");
                         }
+                        md.update(buf, 0, n);
                         out.write(buf, 0, n);
+                    }
+                }
+                if (expectedSha256 != null && expectedSha256.length() == 64) {
+                    byte[] digest = md.digest();
+                    StringBuilder hex = new StringBuilder(64);
+                    for (byte b : digest) {
+                        hex.append(String.format("%02x", b & 0xff));
+                    }
+                    if (!expectedSha256.equals(hex.toString())) {
+                        destZip.delete();
+                        throw new SecurityException("Plugin archive SHA-256 mismatch (expected "
+                                + expectedSha256.substring(0, 12) + "…, got " + hex.substring(0, 12) + "…)");
                     }
                 }
                 return;
@@ -322,7 +356,8 @@ public final class EngineBridge {
 
         try {
             String url = resolvePluginArchiveUrl(safeName, archiveUrl);
-            downloadPluginZipVerified(url, tmpZip);
+            String expectedSha256 = lookupExpectedPluginSha256(safeName);
+            downloadPluginZipVerified(url, tmpZip, expectedSha256);
 
             deleteRecursive(stagingDir);
             if (!stagingDir.mkdirs() && !stagingDir.isDirectory()) {

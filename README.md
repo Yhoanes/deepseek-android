@@ -6,15 +6,15 @@
 
   <h1 align="center">DeepSeek for Android</h1>
 
-  <p><font color="#7d8590">Standalone <b>DeepSeek Harness Desktop (<code>@deepseek-ai/dsh v0.2.2-rc.3</code>)</b> autonomous coding IDE &amp; native <b>ARM64 Android</b> APK — created and engineered by <a href="https://github.com/Yhoanes"><b>Yhoanes</b></a> (zero PRoot, zero cloud relay, zero Gradle).</font></p>
+  <p><font color="#7d8590">Standalone <b>DeepSeek Harness Desktop (<code>@deepseek-ai/dsh v0.2.2-rc.5</code>)</b> autonomous coding IDE &amp; native <b>ARM64 Android</b> APK — created and engineered by <a href="https://github.com/Yhoanes"><b>Yhoanes</b></a> (zero PRoot, zero cloud relay, zero Gradle).</font></p>
 
   <p>
-    <code>v0.2.2-r3</code> &nbsp;&bull;&nbsp;
+    <code>v0.2.2-r4</code> &nbsp;&bull;&nbsp;
     <code>Android 9.0+ (API 28+)</code> &nbsp;&bull;&nbsp;
     <code>Direct Kernel execve() ARM64</code> &nbsp;&bull;&nbsp;
     <code>Native Rust Zstd Bootstrap (~2.5s)</code> &nbsp;&bull;&nbsp;
     <code>Native Rust ds-box v0.3.1</code> &nbsp;&bull;&nbsp;
-    <code>1-Tap ARM64 MCP Plugins Hub</code> &nbsp;&bull;&nbsp;
+    <code>15 Native ARM64 MCP Plugins</code> &nbsp;&bull;&nbsp;
     <code>ADB Bridge / Shizuku + Live OTA</code>
   </p>
 
@@ -30,7 +30,7 @@
 
 ## Architectural Overview
 
-**DeepSeek for Android (`v0.2.2-r3`)** brings the official **DeepSeek Harness Desktop (`@deepseek-ai/dsh`)** autonomous software engineering workspace directly to Android phones and tablets as a self-contained `91 MB` native APK (`com.ds.ide`).
+**DeepSeek for Android (`v0.2.2-r4`)** brings the official **DeepSeek Harness Desktop (`@deepseek-ai/dsh`)** autonomous software engineering workspace directly to Android phones and tablets as a self-contained `91 MB` native APK (`com.ds.ide`).
 
 Instead of slow `proot-distro` containers, emulated Linux VMs, or remote SSH wrappers, **DeepSeek for Android** executes directly on mobile silicon via Linux kernel `execve()`: combining a zero-dependency **Native Rust + Zstandard JNI bootstrap engine (`libds_bootstrap.so`)**, an isolated `Node.js v24.22.3 LTS` ARM64 runtime (`PT_INTERP` + `$ORIGIN` RPATH + persistent V8 `NODE_COMPILE_CACHE`), and a full **10-byte parity Android Bionic Linux userspace** (`/data/user/0/com.ds.ide/files/usr`) powered by **`ds-box v0.3.1`**.
 
@@ -82,15 +82,18 @@ Manage built-in agent loops, web search, shell limits, experimental **SenseVoice
 
 | Native ARM64 Plugin | Version | Capabilities on Android |
 | :--- | :---: | :--- |
-| **Craft Anything + Ghidra** | `v0.5.0` | **335 native Rust MCP tools** (`<50 MB` RAM) for ELF/PE/Mach-O, APK/DEX, `.NET`/NativeAOT, WASM, ESP32/UF2, Godot `.pck`, Unity IL2CPP & GameCube/Wii `.dol` + on-demand native ARM64 **Ghidra 12.1.4** (`craft-ghidra-setup`). |
-| **AGY Video Gen** | `v1.0.0` | Native Rust AI video generation engine (Text-to-Video, consistent Image-to-Video, First-Last Frame bridging, scene extension, and Lip-Sync). |
-| **AGY Video Studio** | `v4.0.0` | Pro 60 FPS Motion Design & universal video studio with `h264_mediacodec` GPU acceleration, multi-track `V2` B-Roll, PiP/Split-Screen, Karaoke captions, and `-14 LUFS` audio mastering. |
-| **Game Studio 2D/3D** | `v2.0.0` | 16 native Rust MCP tools + ARM64 `GDExtension` (`C++`/`Rust`) compiler + 100% local offline signed `.apk` builder and 120–144 FPS Vulkan profiler for **Godot 4**. |
+| **AGY Video Studio 3D (Rust)** | `v3.0.2` | 18 native Rust MCP tools + **Blender 5.0.0 Headless** (`Cycles` + `OpenImageDenoise`), `blender-3d-director` skill, 48 kHz Rust music/SFX DSP, `h264_mediacodec` 60 FPS GPU encode, CapCut & Shizuku. |
+| **PeakCut Pro: Live & AI Clipper** | `v1.0.0` | 12 native Rust MCP tools for hot live-stream clipping (YouTube, Twitch & Kick while live) & `9:16` Shorts with `auto_face` speaker tracking, Split-Screen, karaoke captions & offline `sherpa-onnx`. |
+| **Remotion Studio Android** | `v1.0.1` | 10 native Rust MCP tools + ported **Remotion `4.0.544`** engine (`musl` Rust compositor + Headless Chromium + `h264_mediacodec` GPU) to program and render 60 FPS React/TypeScript videos. |
+| **Craft Anything + Ghidra** | `v0.5.0` | **335 native Rust MCP tools** (`<50 MB` RAM) for ELF/PE/Mach-O, APK/DEX, `.NET`/NativeAOT, WASM, ESP32/UF2, Godot `.pck`, Unity IL2CPP & GameCube/Wii `.dol` + on-demand ARM64 **Ghidra 12.1.4**. |
+| **CLI-Anything Studio & Hub** | `v1.0.0` | 10 native Rust MCP tools + `cli-hub v0.4.1` to browse/install **103+ agent-native CLIs** in `<3s`, run Capability Matrices, and scaffold/validate PEP 420 harnesses (`52/52` checks). |
+| **ARTEX Security Suite (3 Plugins)** | `v1.0.0` | **`artex-audit`** (Dual-Graph SQLite WAL + `127.0.0.1:8787` console), **`artex-recon`** (JS bundle/SPA RBAC/Shadow API recon), and **`artex-defense`** (Sigma, Suricata, MITRE ATT&CK v16 & host triage). |
+| **Game Studio 2D/3D** | `v2.0.0` | 16 native Rust MCP tools + ARM64 `GDExtension` (`C++`/`Rust`) compiler + 100% local offline signed `.apk` builder and 120–144 FPS Vulkan profiler for **Godot 4.7**. |
 | **Unity Studio Android** | `v1.0.0` | 13 native Rust MCP tools + ported **Unity CLI `v1.0.0`** for Unity 6.3 LTS URP 2D/3D scaffolding, deterministic `.meta`/YAML auditing, `$0` GameCI builds, and live `rish` debugging. |
 | **AGY ADB Bridge** | `v1.0.1` | Standalone native Rust wireless ADB 6-digit pairing (`127.0.0.1:5555` offline TCP mode — **no external Shizuku app required**), zero-polling mDNS discovery, and 2s Shizuku fallback. |
 | **GitHub MCP** | `v2.1.1` | 91 native ARM64 GitHub tools (repositories, PRs, code reviews, Issues, Actions CI/CD logs, security alerts) + native Bionic OAuth setup. |
 | **Chrome DevTools MCP** | `v1.10.4` | Headless native ARM64 Chromium automation via Chrome DevTools Protocol (DOM snapshots, network inspection, screenshots, and performance auditing). |
-| **Android CLI & Science Suite** | `v1.0+` | On-device APK/DEX inspection, `logcat`/`dumpsys` telemetry, plus native ARM64 scientific computing (`numpy`, `scipy`, `sympy`, `pandas`, `matplotlib`). |
+| **Android CLI & Science Suite** | `v1.0+` | On-device APK/DEX inspection, `logcat`/`dumpsys` telemetry, plus structured scientific computing & research skills. |
 
 ---
 
@@ -120,14 +123,14 @@ Complete parity with DeepSeek Desktop's configuration architecture — **Account
 ## Installation & Building From Source
 
 ### Option A — Install Official Signed Release APK (OTA-Enabled)
-1. Download `DeepSeek-v0.2.2-r3.apk` from [**GitHub Releases**](https://github.com/Yhoanes/deepseek-android/releases/latest).
+1. Download `DeepSeek-v0.2.2-r4.apk` from [**GitHub Releases**](https://github.com/Yhoanes/deepseek-android/releases/latest).
 2. Install on your Android phone or tablet (future releases update seamlessly in-place via the built-in OTA updater):
    ```bash
    # Via ADB from PC:
-   adb install -r DeepSeek-v0.2.2-r3.apk
+   adb install -r DeepSeek-v0.2.2-r4.apk
 
    # Or on-device via AGY ADB Bridge / Shizuku:
-   rish -c "pm install -r /sdcard/Download/DeepSeek-v0.2.2-r3.apk"
+   rish -c "pm install -r /sdcard/Download/DeepSeek-v0.2.2-r4.apk"
    ```
 
 ### Option B — Gradle-Free Deterministic Build Pipeline
@@ -137,10 +140,10 @@ Complete parity with DeepSeek Desktop's configuration architecture — **Account
 git clone https://github.com/Yhoanes/deepseek-android.git
 cd deepseek-android
 
-# Release APK -> dist/DeepSeek-v0.2.2-r3.apk (package: com.ds.ide, port: 45187)
+# Release APK -> dist/DeepSeek-v0.2.2-r4.apk (package: com.ds.ide, port: 45187)
 bash build.sh
 
-# Side-by-Side Dev APK -> dist/DeepSeek-Dev-v0.2.2-r3.apk (package: com.ds.dev, port: 45188)
+# Side-by-Side Dev APK -> dist/DeepSeek-Dev-v0.2.2-r4.apk (package: com.ds.dev, port: 45188)
 bash build.sh --dev
 ```
 

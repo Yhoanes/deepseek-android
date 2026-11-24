@@ -7,7 +7,7 @@
 #   web/ -> assets/web/{__ds_android_boot.js,__ds_plugins_catalog.json,deepseek-icon.png}
 #   env/{pkg,overlay,bootstrap} -> assets/env/*
 #   gen_android_config + aapt (R.java) -> javac -> d8 -> aapt -> zip (-0 archives)
-#   -> zipalign -> apksigner -> dist/DeepSeek-v0.2.2-r3.apk -> apksigner verify
+#   -> zipalign -> apksigner -> dist/DeepSeek-v0.2.2-r4.apk -> apksigner verify
 #
 # Flags:
 #   --dev   build side-by-side dev edition (com.ds.dev, DeepSeek Dev, port 45188)
